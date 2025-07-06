@@ -1,9 +1,10 @@
 module digital_clock(
     input wire clk, // 50 MHz clock input on DE10 board
     input wire reset, // Reset signal
-    input wire sw, // Switch to toggle between time mode and set time mode
-    input wire button1, // Button 1 to increment hours (only in set time mode)
-    input wire button2, // Button 2 to decrement hours (only in set time mode)
+    input wire mode_switch, // Switch to toggle between time setting mode and normal mode
+    input wire button_hours, // Button to increment hours (only in time setting mode)
+    input wire button_minutes, // Button to increment minutes (only in time setting mode)
+    input wire hour_mode_switch, // Switch for 12-hour (high) or 24-hour (low) mode
     output reg [6:0] seg0, // 7-segment display segments for seconds (ones)
     output reg [6:0] seg1, // 7-segment display segments for seconds (tens)
     output reg [6:0] seg2, // 7-segment display segments for minutes (ones)
@@ -38,35 +39,30 @@ module digital_clock(
         end
     end
 
-    // Button press handling for time setting (Increment and Decrement hours) in set time mode
+    // Time setting functionality (mode_switch = 1 for setting time)
     always @(posedge clk or posedge reset) begin
         if (reset) begin
-            hours <= 0; // Reset hours
-        end else if (sw) begin // When sw is in set time mode
-            // Button 1 to increment hours
-            if (button1) begin
-                if (hours == 23)
+            hours <= 0;
+            minutes <= 0;
+            seconds <= 0;
+        end else if (mode_switch) begin // Time setting mode
+            // Increment hour
+            if (button_hours) begin
+                if (hours == 23) 
                     hours <= 0; // Wrap around to 0 if hours reach 23
                 else
                     hours <= hours + 1;
             end
-            // Button 2 to decrement hours
-            if (button2) begin
-                if (hours == 0)
-                    hours <= 23; // Wrap around to 23 if hours reach 0
+
+            // Increment minutes
+            if (button_minutes) begin
+                if (minutes == 59)
+                    minutes <= 0; // Wrap around to 0 if minutes reach 59
                 else
-                    hours <= hours - 1;
+                    minutes <= minutes + 1;
             end
         end
-    end
-
-    // Seconds, Minutes, and Hours Counters with +5 hours time zone adjustment
-    always @(posedge clk) begin
-        if (reset) begin
-            seconds <= 0;
-            minutes <= 0;
-            hours <= 0;
-        end else if (!sw && one_sec_pulse) begin // Only update time when in time mode
+        else if (one_sec_pulse) begin // Normal mode: Time runs in the background
             if (seconds == 59) begin
                 seconds <= 0;
                 if (minutes == 59) begin
@@ -84,33 +80,30 @@ module digital_clock(
         end
     end
 
-    // Adjust the hours for +5 hours time zone difference
-    always @(posedge clk) begin
-        if (!sw) begin
-            // Apply +5 hours time zone offset, using modulus 24 to wrap around
-            hours <= (hours + 5) % 24;
-        end
-    end
-
     // 7-Segment Display Decoder
     function [6:0] seven_segment_decoder;
         input [3:0] digit;
-        begin
-            case (digit)
-                4'd0: seven_segment_decoder = 7'b1000000; // 0
-                4'd1: seven_segment_decoder = 7'b1111001; // 1
-                4'd2: seven_segment_decoder = 7'b0100100; // 2
-                4'd3: seven_segment_decoder = 7'b0110000; // 3
-                4'd4: seven_segment_decoder = 7'b0011001; // 4
-                4'd5: seven_segment_decoder = 7'b0010010; // 5
-                4'd6: seven_segment_decoder = 7'b0000010; // 6
-                4'd7: seven_segment_decoder = 7'b1111000; // 7
-                4'd8: seven_segment_decoder = 7'b0000000; // 8
-                4'd9: seven_segment_decoder = 7'b0010000; // 9
-                default: seven_segment_decoder = 7'b1111111; // blank
-            endcase
-        end
+        case (digit)
+            4'd0: seven_segment_decoder = 7'b1000000; // 0
+            4'd1: seven_segment_decoder = 7'b1111001; // 1
+            4'd2: seven_segment_decoder = 7'b0100100; // 2
+            4'd3: seven_segment_decoder = 7'b0110000; // 3
+            4'd4: seven_segment_decoder = 7'b0011001; // 4
+            4'd5: seven_segment_decoder = 7'b0010010; // 5
+            4'd6: seven_segment_decoder = 7'b0000010; // 6
+            4'd7: seven_segment_decoder = 7'b1111000; // 7
+            4'd8: seven_segment_decoder = 7'b0000000; // 8
+            4'd9: seven_segment_decoder = 7'b0010000; // 9
+            default: seven_segment_decoder = 7'b1111111; // blank
+        endcase
     endfunction
+
+    // Calculate hour display based on 12/24 hour mode
+    wire [4:0] display_hours;
+    assign display_hours = (hour_mode_switch && (hours == 0)) ? 5'd12 : // Midnight in 12-hour mode
+                           (hour_mode_switch && (hours > 12)) ? (hours - 12) : 
+                           (hour_mode_switch && (hours == 12)) ? 5'd12 : // Noon in 12-hour mode
+                           hours; // 24-hour mode
 
     // Assigning segments to corresponding digits
     always @(*) begin
@@ -122,9 +115,9 @@ module digital_clock(
         seg2 = seven_segment_decoder(minutes % 10); // ones digit of minutes
         seg3 = seven_segment_decoder(minutes / 10); // tens digit of minutes
 
-        // Decode hours
-        seg4 = seven_segment_decoder(hours % 10); // ones digit of hours
-        seg5 = seven_segment_decoder(hours / 10); // tens digit of hours
+        // Decode hours (based on 12/24 hour mode)
+        seg4 = seven_segment_decoder(display_hours % 10); // ones digit of hours
+        seg5 = seven_segment_decoder(display_hours / 10); // tens digit of hours
     end
 
 endmodule
