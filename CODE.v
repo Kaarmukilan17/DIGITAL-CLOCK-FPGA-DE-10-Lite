@@ -1,8 +1,9 @@
 module digital_clock(
     input wire clk, // 50 MHz clock input on DE10 board
     input wire reset, // Reset signal
-    input wire button1, // Button 1 to increment hours
-    input wire button2, // Button 2 to decrement hours
+    input wire sw, // Switch to toggle between time mode and set time mode
+    input wire button1, // Button 1 to increment hours (only in set time mode)
+    input wire button2, // Button 2 to decrement hours (only in set time mode)
     output reg [6:0] seg0, // 7-segment display segments for seconds (ones)
     output reg [6:0] seg1, // 7-segment display segments for seconds (tens)
     output reg [6:0] seg2, // 7-segment display segments for minutes (ones)
@@ -37,11 +38,11 @@ module digital_clock(
         end
     end
 
-    // Button press handling for time setting (Increment and Decrement hours)
+    // Button press handling for time setting (Increment and Decrement hours) in set time mode
     always @(posedge clk or posedge reset) begin
         if (reset) begin
             hours <= 0; // Reset hours
-        end else begin
+        end else if (sw) begin // When sw is in set time mode
             // Button 1 to increment hours
             if (button1) begin
                 if (hours == 23)
@@ -65,7 +66,7 @@ module digital_clock(
             seconds <= 0;
             minutes <= 0;
             hours <= 0;
-        end else if (one_sec_pulse) begin
+        end else if (!sw && one_sec_pulse) begin // Only update time when in time mode
             if (seconds == 59) begin
                 seconds <= 0;
                 if (minutes == 59) begin
