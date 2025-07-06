@@ -100,6 +100,7 @@ Refer to the project report **DIGITAL_CLOCK_FPGA_DE10** - VIDEO LINKS for demo v
 
 - ⚠️ **Rapid prototyping**  
   This project was built in just **1 day**, so minor optimizations were skipped.
+  Core features are hardware-tested, but details like pin explanations, simulations, and bug logs were minimized due to time constraints.
 
 ---
 
