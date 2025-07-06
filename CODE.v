@@ -5,6 +5,7 @@ module digital_clock(
     input wire button_hours, // Button to increment hours (only in time setting mode)
     input wire button_minutes, // Button to increment minutes (only in time setting mode)
     input wire hour_mode_switch, // Switch for 12-hour (high) or 24-hour (low) mode
+    input wire time_zone_switch, // Switch to toggle between original time and +2 hours adjustment
     output reg [6:0] seg0, // 7-segment display segments for seconds (ones)
     output reg [6:0] seg1, // 7-segment display segments for seconds (tens)
     output reg [6:0] seg2, // 7-segment display segments for minutes (ones)
@@ -80,6 +81,17 @@ module digital_clock(
         end
     end
 
+    // Time zone adjustment (+2 hours) with wrap-around using modulus
+    wire [4:0] adjusted_hours;
+    assign adjusted_hours = (time_zone_switch) ? ((hours + 2) % 24) : hours;
+
+    // Calculate hour display based on 12/24 hour mode and time zone adjustment
+    wire [4:0] display_hours;
+    assign display_hours = (hour_mode_switch && (adjusted_hours == 0)) ? 5'd12 : // Midnight in 12-hour mode
+                           (hour_mode_switch && (adjusted_hours > 12)) ? (adjusted_hours - 12) : 
+                           (hour_mode_switch && (adjusted_hours == 12)) ? 5'd12 : // Noon in 12-hour mode
+                           adjusted_hours; // 24-hour mode or adjusted
+
     // 7-Segment Display Decoder
     function [6:0] seven_segment_decoder;
         input [3:0] digit;
@@ -98,13 +110,6 @@ module digital_clock(
         endcase
     endfunction
 
-    // Calculate hour display based on 12/24 hour mode
-    wire [4:0] display_hours;
-    assign display_hours = (hour_mode_switch && (hours == 0)) ? 5'd12 : // Midnight in 12-hour mode
-                           (hour_mode_switch && (hours > 12)) ? (hours - 12) : 
-                           (hour_mode_switch && (hours == 12)) ? 5'd12 : // Noon in 12-hour mode
-                           hours; // 24-hour mode
-
     // Assigning segments to corresponding digits
     always @(*) begin
         // Decode seconds
@@ -115,7 +120,7 @@ module digital_clock(
         seg2 = seven_segment_decoder(minutes % 10); // ones digit of minutes
         seg3 = seven_segment_decoder(minutes / 10); // tens digit of minutes
 
-        // Decode hours (based on 12/24 hour mode)
+        // Decode hours (based on 12/24 hour mode and time zone adjustment)
         seg4 = seven_segment_decoder(display_hours % 10); // ones digit of hours
         seg5 = seven_segment_decoder(display_hours / 10); // tens digit of hours
     end
