@@ -1,8 +1,8 @@
 module digital_clock(
     input wire clk, // 50 MHz clock input on DE10 board
     input wire reset, // Reset signal
-    input wire button1, // Multi-function button 1
-    input wire button2, // Multi-function button 2
+    input wire button1, // Button 1 to increment hours
+    input wire button2, // Button 2 to decrement hours
     output reg [6:0] seg0, // 7-segment display segments for seconds (ones)
     output reg [6:0] seg1, // 7-segment display segments for seconds (tens)
     output reg [6:0] seg2, // 7-segment display segments for minutes (ones)
@@ -13,7 +13,6 @@ module digital_clock(
 
     // Clock Divider Parameters
     parameter DIVISOR = 50000000; // Divide 50MHz to 1Hz for seconds
-    parameter LONG_PRESS_THRESHOLD = 25000000; // Half a second for 50MHz clock
 
     // Registers for clock divider, counters
     reg [25:0] clk_divider = 0;
@@ -21,12 +20,6 @@ module digital_clock(
     reg [5:0] seconds = 0; // 0-59 for seconds
     reg [5:0] minutes = 0; // 0-59 for minutes
     reg [4:0] hours = 0; // 0-23 for hours
-
-    // Button press counters for long press detection
-    reg [25:0] button1_counter = 0;
-    reg [25:0] button2_counter = 0;
-    reg button1_long_press = 0;
-    reg button2_long_press = 0;
 
     // Clock Divider to generate 1-second pulse
     always @(posedge clk or posedge reset) begin
@@ -44,64 +37,24 @@ module digital_clock(
         end
     end
 
-    // Button press handling for time setting
+    // Button press handling for time setting (Increment and Decrement hours)
     always @(posedge clk or posedge reset) begin
         if (reset) begin
-            button1_counter <= 0;
-            button2_counter <= 0;
-            button1_long_press <= 0;
-            button2_long_press <= 0;
+            hours <= 0; // Reset hours
         end else begin
-            // Button 1 handling (increment)
+            // Button 1 to increment hours
             if (button1) begin
-                button1_counter <= button1_counter + 1;
-                if (button1_counter >= LONG_PRESS_THRESHOLD) begin
-                    button1_long_press <= 1;
-                end
-            end else begin
-                if (button1_counter > 0) begin
-                    if (button1_long_press) begin
-                        // Long press - increment hours
-                        if (hours == 23)
-                            hours <= 0;
-                        else
-                            hours <= hours + 1;
-                    end else begin
-                        // Short press - increment minutes
-                        if (minutes == 59)
-                            minutes <= 0;
-                        else
-                            minutes <= minutes + 1;
-                    end
-                end
-                button1_counter <= 0;
-                button1_long_press <= 0;
+                if (hours == 23)
+                    hours <= 0; // Wrap around to 0 if hours reach 23
+                else
+                    hours <= hours + 1;
             end
-
-            // Button 2 handling (decrement)
+            // Button 2 to decrement hours
             if (button2) begin
-                button2_counter <= button2_counter + 1;
-                if (button2_counter >= LONG_PRESS_THRESHOLD) begin
-                    button2_long_press <= 1;
-                end
-            end else begin
-                if (button2_counter > 0) begin
-                    if (button2_long_press) begin
-                        // Long press - decrement hours
-                        if (hours == 0)
-                            hours <= 23;
-                        else
-                            hours <= hours - 1;
-                    end else begin
-                        // Short press - decrement minutes
-                        if (minutes == 0)
-                            minutes <= 59;
-                        else
-                            minutes <= minutes - 1;
-                    end
-                end
-                button2_counter <= 0;
-                button2_long_press <= 0;
+                if (hours == 0)
+                    hours <= 23; // Wrap around to 23 if hours reach 0
+                else
+                    hours <= hours - 1;
             end
         end
     end
