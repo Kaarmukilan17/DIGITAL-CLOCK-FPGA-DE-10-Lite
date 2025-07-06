@@ -60,7 +60,7 @@ module digital_clock(
         end
     end
 
-    // Seconds, Minutes, and Hours Counters
+    // Seconds, Minutes, and Hours Counters with +5 hours time zone adjustment
     always @(posedge clk) begin
         if (reset) begin
             seconds <= 0;
@@ -81,6 +81,14 @@ module digital_clock(
             end else begin
                 seconds <= seconds + 1;
             end
+        end
+    end
+
+    // Adjust the hours for +5 hours time zone difference
+    always @(posedge clk) begin
+        if (!sw) begin
+            // Apply +5 hours time zone offset, using modulus 24 to wrap around
+            hours <= (hours + 5) % 24;
         end
     end
 
