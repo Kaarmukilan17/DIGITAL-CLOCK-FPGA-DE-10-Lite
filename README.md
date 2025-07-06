@@ -44,7 +44,7 @@ Refer to the project report **DIGITAL_CLOCK_FPGA_DE10** - VIDEO LINKS for demo v
 
 ## 📍 Pin Assignment Instructions
 
-1. Download the pin assignment file: `DE10_Lite_pin_assignments.pdf` from the GitHub repo.
+1. Download the pin assignment file: `DE10_Lite_pin_assignments.csv` from the GitHub repo.
 2. Open Quartus Prime project where the Verilog file is saved.
 3. Ensure FPGA device is selected as: `10M50DAF484C7G`.
 4. Import assignments:
